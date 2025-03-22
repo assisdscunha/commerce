@@ -1,0 +1,10 @@
+{% if user.is_authenticated %}
+<form action="{% if comment_id %}{% url 'insert_comments' auction.id comment_id %}{% else %}{% url 'insert_comments' auction.id %}{% endif %}" method="post" class="mt-4">
+  {% csrf_token %}
+  {{ comment }}
+  <input type="hidden" name="parent_comment" value="{{ comment_id }}">
+  <div class="d-flex justify-content-end mt-2 mt-3" style="width: 40%;">
+    <button type="submit" class="btn btn-primary mb-4">Send</button>
+  </div>
+</form>
+{% endif %}

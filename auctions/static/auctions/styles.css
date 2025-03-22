@@ -1,0 +1,57 @@
+body {
+    padding: 10px;
+    height: 100vh;
+}
+
+#comments-section {
+    display: none;
+}
+
+#toggle-comments:checked~#comments-section {
+    display: block;
+}
+
+#toggle-comments+label::before {
+    content: "Show Comments";
+}
+
+#toggle-comments:checked+label::before {
+    content: "Hide Comments";
+}
+
+.reply-form, .sub-reply-form {
+    display: none;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.toggle-reply:checked ~ .reply-form,
+.toggle-sub-reply:checked ~ .sub-reply-form {
+    display: block;
+}
+
+.reply-label {
+    visibility: hidden;
+    color: rgb(93, 93, 233);
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.reply-label:hover, .reply-label:active {
+    color: rgb(137, 137, 197);
+}
+
+.reply-label:visited {
+    color: #572170
+}
+
+.user-comment-text:hover .reply-label,
+.user-response:hover .reply-label {
+    visibility: visible;
+}
+
+.user-comment-text h6 {
+    display: inline-flex;
+    align-items: center;
+}

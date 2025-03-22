@@ -1,0 +1,20 @@
+{% for response in responses %}
+  <div class="responses" id="comment-{{ response.id }}">
+    <div class="d-flex align-items-center user-response">
+      <p>{{ response }}</p>
+      {% if user.is_authenticated %}
+        <label for="sub-reply-comment-{{ response.id }}" class="reply-label mb-0 pl-2">reply</label>
+        <input type="radio" name="reply-toggle" id="sub-reply-comment-{{ response.id }}" class="d-none toggle-sub-reply" />
+        <div class="sub-reply-form">
+          {% include 'auctions/comments_form.html' with comment=comment_form.comment comment_id=response.id %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if response.responses.exists %}
+      <div class="sub-responses" style="margin-left: 20px;">
+        {% include 'auctions/comment_responses.html' with responses=response.responses.all %}
+      </div>
+    {% endif %}
+  </div>
+{% endfor %}
