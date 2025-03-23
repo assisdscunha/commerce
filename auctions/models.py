@@ -151,4 +151,6 @@ class Watchlist(models.Model):
     auctionlisting = models.ForeignKey(
         AuctionsListing,
         models.CASCADE,
+        related_name="user_watchlist"
     )
+    created_at = models.DateTimeField(auto_now_add=True)

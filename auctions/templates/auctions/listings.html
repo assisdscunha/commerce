@@ -3,7 +3,14 @@
 {% load l10n %}
 
 {% block body %}
-  <h2>Listing: {{ auction.title }}</h2>
+  <div class="d-flex flex-column">
+    <h2>Listing: {{ auction.title }}</h2>
+    {% if is_watchlist %}
+      <a href="{% url 'toggle_watchlist' auction.id %}">Remove from watchlist</a>
+    {% else %}
+      <a href="{% url 'toggle_watchlist' auction.id %}">Add to watchlist</a>
+    {% endif %}
+  </div>
   <img src="{{ auction.url }}" class="mt-3 w-auto h-25" />
   <p class="mt-3">{{ auction.description }}</p>
   <h3>R$ {{ auction.bids.last.value|localize }}</h3>

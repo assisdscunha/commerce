@@ -1,58 +1,95 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Bids, Comments, Descriptions, Titles, Urls, User, AuctionsListing
+from .models import (
+    Bids,
+    Comments,
+    Descriptions,
+    Titles,
+    Urls,
+    User,
+    AuctionsListing,
+    Watchlist,
+)
 from .forms import CreateListingForm, NewBiddingForm, NewCommentForm
 from django.utils import timezone
 
 
+def get_auction_listing(**kwargs):
+    return {
+        "auctions": AuctionsListing.objects.filter(
+            status=AuctionsListing.Status.ACTIVE, **kwargs
+        ).order_by("created_at")
+    }
+
+
+def get_auction_context(listing_id, user):
+    auction = get_object_or_404(AuctionsListing, id=listing_id)
+    is_watchlist = Watchlist.objects.filter(
+        auctionlisting=listing_id, user=user
+    ).exists()
+    bid_count = auction.bids.count()
+    latest_bid = auction.bids.last()
+    is_bidder_user = latest_bid.created_by == user if latest_bid else False
+    return {
+        "auction": auction,
+        "bid_count": bid_count,
+        "is_bidder_user": is_bidder_user,
+        "bid_form": NewBiddingForm(),
+        "comment_form": NewCommentForm(),
+        "all_comments": auction.comments.filter(parent_comment__isnull=True),
+        "is_watchlist": is_watchlist,
+    }
+
+
+def is_valid_bid(bid_value, latest_bid):
+    return latest_bid and bid_value > latest_bid.value
+
+
 def index(request):
-    return render(
-        request,
-        "auctions/index.html",
-        {
-            "auctions": AuctionsListing.objects.filter(
-                status=AuctionsListing.Status.ACTIVE
-            ).order_by("created_at")
-        },
-    )
+    listings = get_auction_listing()
+    listings["title"] = "Active Listings"
+    return render(request, "auctions/index.html", listings)
+
+
+@login_required
+def watchlist(request):
+    listings = get_auction_listing(user_watchlist__user=request.user)
+    listings["title"] = f"{request.user.username.capitalize()}'s Watchlist"
+
+    return render(request, "auctions/index.html", listings)
 
 
 def new_bid(request, listing_id):
     if request.method == "POST":
         bid_form = NewBiddingForm(request.POST)
-        
+
         if bid_form.is_valid():
             listing = get_object_or_404(AuctionsListing, id=listing_id)
             bid_value = bid_form.cleaned_data["new_bid"]
             latest_bid = listing.bids.last()
 
-            if latest_bid and bid_value <= latest_bid.value:
+            if not is_valid_bid(bid_value, latest_bid):
+                context = get_auction_context(listing_id, request.user)
+                context["bid_form"] = bid_form
+                context["error_message"] = (
+                    "Your bid must be higher than the current bid."
+                )
                 return render(
                     request,
                     "auctions/listings.html",
-                    {
-                        "auction": listing,
-                        "bid_count": listing.bids.count(),
-                        "is_bidder_user": latest_bid.created_by == request.user,
-                        "bid_form": bid_form,
-                        "comment_form": NewCommentForm(),
-                        "all_comments": listing.comments.filter(parent_comment__isnull=True),
-                        "error_message": "Your bid must be higher than the current bid."
-                    },
+                    context,
                 )
 
             Bids.objects.create(
-                value=bid_value,
-                created_by=request.user,
-                listing=listing
+                value=bid_value, created_by=request.user, listing=listing
             )
 
-    return redirect('listings', listing_id=listing_id)
+    return redirect("listings", listing_id=listing_id)
 
 
 def new_comment(request, listing_id, parent_comment=None):
@@ -61,39 +98,25 @@ def new_comment(request, listing_id, parent_comment=None):
 
         if comment_form.is_valid():
             listing = get_object_or_404(AuctionsListing, id=listing_id)
-            parent = None  # Inicializa a variável parent com None
-            if parent_comment:
-                parent = get_object_or_404(Comments, id=parent_comment)
+            parent = (
+                get_object_or_404(Comments, id=parent_comment)
+                if parent_comment
+                else None
+            )
             Comments.objects.create(
                 user_comment=comment_form.cleaned_data["comment"],
                 listing=listing,
                 parent_comment=parent,
             )
-        else:
-            print("formulario nao eh valido")
-    return redirect('listings', listing_id=listing_id)
+    return redirect("listings", listing_id=listing_id)
 
 
 def listings(request, listing_id):
-    if request.method == "POST":
-        ...
-    auction = get_object_or_404(
-        AuctionsListing.objects.prefetch_related("bids", "comments"), id=listing_id
-    )
-    bid_count = auction.bids.count()
-    latest_bid = auction.bids.last()
-    is_bidder_user = latest_bid.created_by == request.user
+    context = get_auction_context(listing_id, request.user)
     return render(
         request,
         "auctions/listings.html",
-        {
-            "auction": auction,
-            "bid_count": bid_count,
-            "is_bidder_user": is_bidder_user,
-            "bid_form": NewBiddingForm(),
-            "comment_form": NewCommentForm(),
-            "all_comments": auction.comments.filter(parent_comment__isnull=True),
-        },
+        context,
     )
 
 
@@ -196,3 +219,14 @@ def add_listing(request):
 
 def maintain_categories(request):
     return render(request, "auctions/categories.html")
+
+
+@login_required
+def toggle_watchlist(request, listing_id):
+    listing = get_object_or_404(AuctionsListing, id=listing_id)
+    watchlist_entry, created = Watchlist.objects.get_or_create(
+        user=request.user, auctionlisting=listing
+    )
+    if not created:
+        watchlist_entry.delete()
+    return redirect("listings", listing_id=listing_id)
