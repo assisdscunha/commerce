@@ -24,7 +24,8 @@ class Descriptions(models.Model):
 
 
 class AuctionCategories(models.Model):
-    category = models.CharField(max_length=255, primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
+    category = models.CharField(max_length=100, unique=True)
 
     class Meta:
         ordering = ["category"]
