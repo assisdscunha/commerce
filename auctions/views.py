@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from .models import (
+    AuctionCategories,
     Bids,
     Comments,
     Descriptions,
@@ -217,8 +218,15 @@ def add_listing(request):
         )
 
 
-def maintain_categories(request):
-    return render(request, "auctions/categories.html")
+def search_by_category(request):
+    categories = AuctionCategories.objects.all()
+    return render(request, "auctions/categories.html", {"categories": categories})
+
+
+def go_to_category(request, category_id):
+    listings = get_auction_listing(category__category=category_id)
+    listings['title'] = category_id
+    return render(request, "auctions/index.html", listings)
 
 
 @login_required

@@ -14,5 +14,6 @@ urlpatterns = [
     path("listings/<str:listing_id>/new_bid", views.new_bid, name="new_bid"),
     path("toggle_watchlist/<str:listing_id>", views.toggle_watchlist, name="toggle_watchlist"),
     path("add", views.add_listing, name="add"),
-    path("categories", views.maintain_categories, name="categories")
+    path("categories", views.search_by_category, name="categories"),
+    path("goto/<str:category_id>", views.go_to_category, name="filter_category"),
 ]
