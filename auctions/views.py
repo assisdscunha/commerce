@@ -184,9 +184,7 @@ def add_listing(request):
     if request.method == "POST":
         form = CreateListingForm(request.POST)
         if form.is_valid():
-            """comment_insance = create_fk_instance(
-                Comments, form, "comment", "user_comment"
-            )"""
+            user = request.user
             url_instance, _ = Urls.objects.get_or_create(
                 url=form.cleaned_data["image_url"]
             )
@@ -198,7 +196,7 @@ def add_listing(request):
             )
 
             listing = AuctionsListing(
-                created_by=request.user,
+                created_by=user,
                 category=(
                     form.cleaned_data["category"]
                     if form.cleaned_data["category"]
@@ -211,7 +209,7 @@ def add_listing(request):
             )
             listing.save()
             Bids.objects.create(
-                value=form.cleaned_data["starting_bid"], listing=listing
+                value=form.cleaned_data["starting_bid"], listing=listing, created_by=user
             )
             return redirect("index")
     else:
