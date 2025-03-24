@@ -24,7 +24,7 @@ class Descriptions(models.Model):
 
 
 class AuctionCategories(models.Model):
-    category = models.CharField(max_length=100, primary_key=True)
+    category = models.CharField(max_length=255, primary_key=True)
 
     class Meta:
         ordering = ["category"]
@@ -58,21 +58,21 @@ class AuctionsListing(models.Model):
     category = models.ForeignKey(
         AuctionCategories,
         on_delete=models.RESTRICT,
-        related_name="category_type",
+        related_name="listings",
         blank=True,
         null=True,
     )
     url = models.ForeignKey(
-        Urls, on_delete=models.RESTRICT, blank=True, related_name="image"
+        Urls, on_delete=models.RESTRICT, blank=True, related_name="listings"
     )
     title = models.ForeignKey(
-        Titles, on_delete=models.RESTRICT, blank=False, related_name="titles"
+        Titles, on_delete=models.RESTRICT, blank=False, related_name="listings"
     )
     description = models.ForeignKey(
         Descriptions,
         on_delete=models.RESTRICT,
         blank=False,
-        related_name="descriptions",
+        related_name="listings",
     )
     status = models.CharField(max_length=1, default=Status.ACTIVE, choices=Status)
 
