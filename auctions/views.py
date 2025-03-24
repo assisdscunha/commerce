@@ -30,9 +30,11 @@ def get_auction_listing(**kwargs):
 
 def get_auction_context(listing_id, user):
     auction = get_object_or_404(AuctionsListing, id=listing_id)
-    is_watchlist = Watchlist.objects.filter(
-        auctionlisting=listing_id, user=user
-    ).exists()
+    is_watchlist = False
+    if user.is_authenticated:
+        is_watchlist = Watchlist.objects.filter(
+            auctionlisting=listing_id, user=user
+        ).exists()
     bid_count = auction.bids.count()
     latest_bid = auction.bids.last()
     is_bidder_user = latest_bid.created_by == user if latest_bid else False
@@ -225,7 +227,7 @@ def search_by_category(request):
 
 def go_to_category(request, category_id):
     listings = get_auction_listing(category__category=category_id)
-    listings['title'] = category_id
+    listings["title"] = category_id
     return render(request, "auctions/index.html", listings)
 
 
