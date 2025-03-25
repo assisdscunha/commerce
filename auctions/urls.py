@@ -16,4 +16,6 @@ urlpatterns = [
     path("add", views.add_listing, name="add"),
     path("categories", views.search_by_category, name="categories"),
     path("goto/<str:category_id>", views.go_to_category, name="filter_category"),
+    path("close_auction/<str:listing_id>", views.close_auction, name="close_auction"),
+    path("cancel_auction/<str:listing_id>", views.cancel_auction, name="cancel_auction"),
 ]

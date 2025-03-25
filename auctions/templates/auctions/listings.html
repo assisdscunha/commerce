@@ -6,32 +6,47 @@
   <h2>Listing: {{ auction.title }}</h2>
   <div>
     {% if user.is_authenticated %}
-      {% if is_watchlist %}
-        <a href="{% url 'toggle_watchlist' auction.id %}" class="btn btn-outline-danger mb-3 btn-sm">Remove from watchlist</a>
-      {% else %}
-        <a href="{% url 'toggle_watchlist' auction.id %}" class="btn btn-outline-primary mb-3 btn-sm">Add to watchlist</a>
-      {% endif %}
+    {% if user == auction.winner %}
+      <div class="alert alert-info" role="alert">You won the auction!</div>
+    {% endif %}
+      <form action="{% url 'toggle_watchlist' auction.id %}" method="POST">
+        {% csrf_token %}
+        <button class="btn {{ btn_class }} mb-3 btn-sm">{{ watchlist_label }}</button>
+      </form>
     {% endif %}
   </div>
   <img src="{{ auction.url }}" class="mt-3 w-auto h-25" />
   <p class="mt-3">{{ auction.description }}</p>
   <h3>R$ {{ auction.bids.last.value|localize }}</h3>
-  {% if bid_count > 1 %}
-    {% if is_bidder_user %}
-      <p>Bid count: {{ bid_count }}. Your bid is the current bid.</p>
-    {% else %}
-      <p>Bid count: {{ bid_count }}.</p>
-    {% endif %}
+  {% if bid_count > 0 %}
+    <p>
+      Bid count: {{ bid_count }}.{% if is_bidder_user %}Your bid is the current bid.{% endif %}
+    </p>
   {% endif %}
   {% if user.is_authenticated %}
-    {% if error_message %}
-      <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+    {% if user == auction.created_by %}
+      <div class="d-inline">
+        {% if auction.created_by != auction.bids.last.created_by %}
+          <form action="{% url 'close_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to close your auction?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Close Auction</button>
+          </form>
+        {% endif %}
+        <form action="{% url 'cancel_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to cancel your auction?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Cancel Auction</button>
+        </form>
+      </div>
+    {% else %}
+      {% if error_message %}
+        <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+      {% endif %}
+      <form action="{% url 'new_bid' auction.id %}" method="post" class="mt-4">
+        {% csrf_token %}
+        {{ bid_form.new_bid }}
+        <button type="submit" class="btn btn-primary mt-2">Submit</button>
+      </form>
     {% endif %}
-    <form action="{% url 'new_bid' auction.id %}" method="post" class="mt-4">
-      {% csrf_token %}
-      {{ bid_form.new_bid }}
-      <button type="submit" class="btn btn-primary mt-2">Submit</button>
-    </form>
   {% endif %}
   <h3 class="mt-4">Details</h3>
   <ul>

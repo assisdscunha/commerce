@@ -76,6 +76,9 @@ class AuctionsListing(models.Model):
         related_name="listings",
     )
     status = models.CharField(max_length=1, default=Status.ACTIVE, choices=Status)
+    winner = models.ForeignKey(
+        User, models.SET_NULL, blank=True, null=True, related_name="winner_listings"
+    )
 
     class Meta:
         ordering = ["created_at"]
@@ -92,7 +95,9 @@ class Comments(models.Model):
         on_delete=models.CASCADE,
         related_name="responses",
     )
-    listing = models.ForeignKey(AuctionsListing, on_delete=models.CASCADE, related_name="comments")
+    listing = models.ForeignKey(
+        AuctionsListing, on_delete=models.CASCADE, related_name="comments"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User,
@@ -100,22 +105,24 @@ class Comments(models.Model):
         blank=True,
         null=True,
     )
-    
+
     def get_all_comments(self):
         comments = [{"comment": self.user_comment, "id": self.id, "responses": []}]
-        
+
         for response in self.responses.all():
-            comments[0]["responses"].append({
-                "comment": response.user_comment,
-                "id": response.id,
-                "responses": response.get_all_comments()
-            })
+            comments[0]["responses"].append(
+                {
+                    "comment": response.user_comment,
+                    "id": response.id,
+                    "responses": response.get_all_comments(),
+                }
+            )
 
         return comments
 
     def __str__(self):
         return self.user_comment
-        
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -150,8 +157,6 @@ class Watchlist(models.Model):
         null=True,
     )
     auctionlisting = models.ForeignKey(
-        AuctionsListing,
-        models.CASCADE,
-        related_name="user_watchlist"
+        AuctionsListing, models.CASCADE, related_name="user_watchlist"
     )
     created_at = models.DateTimeField(auto_now_add=True)

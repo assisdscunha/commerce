@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
+from django.db.models import Max
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -28,6 +29,14 @@ def get_auction_listing(**kwargs):
     }
 
 
+def get_all_acutions(**kwargs):
+    return {
+        "auctions": AuctionsListing.objects.filter(
+            **kwargs
+        ).order_by("created_at")
+    }
+
+
 def get_auction_context(listing_id, user):
     auction = get_object_or_404(AuctionsListing, id=listing_id)
     is_watchlist = False
@@ -35,7 +44,7 @@ def get_auction_context(listing_id, user):
         is_watchlist = Watchlist.objects.filter(
             auctionlisting=listing_id, user=user
         ).exists()
-    bid_count = auction.bids.count()
+    bid_count = auction.bids.count() - 1
     latest_bid = auction.bids.last()
     is_bidder_user = latest_bid.created_by == user if latest_bid else False
     return {
@@ -45,7 +54,10 @@ def get_auction_context(listing_id, user):
         "bid_form": NewBiddingForm(),
         "comment_form": NewCommentForm(),
         "all_comments": auction.comments.filter(parent_comment__isnull=True),
-        "is_watchlist": is_watchlist,
+        "watchlist_label": (
+            "Remove from watchlist" if is_watchlist else "Add to watchlist"
+        ),
+        "btn_class": "btn-outline-danger" if is_watchlist else "btn-outline-primary",
     }
 
 
@@ -61,7 +73,7 @@ def index(request):
 
 @login_required
 def watchlist(request):
-    listings = get_auction_listing(user_watchlist__user=request.user)
+    listings = get_all_acutions(user_watchlist__user=request.user)
     listings["title"] = f"{request.user.username.capitalize()}'s Watchlist"
 
     return render(request, "auctions/index.html", listings)
@@ -209,7 +221,9 @@ def add_listing(request):
             )
             listing.save()
             Bids.objects.create(
-                value=form.cleaned_data["starting_bid"], listing=listing, created_by=user
+                value=form.cleaned_data["starting_bid"],
+                listing=listing,
+                created_by=user,
             )
             return redirect("index")
     else:
@@ -231,10 +245,33 @@ def go_to_category(request, category_id):
 
 @login_required
 def toggle_watchlist(request, listing_id):
-    listing = get_object_or_404(AuctionsListing, id=listing_id)
-    watchlist_entry, created = Watchlist.objects.get_or_create(
-        user=request.user, auctionlisting=listing
-    )
-    if not created:
-        watchlist_entry.delete()
+    if request.method == "POST":
+        listing = get_object_or_404(AuctionsListing, id=listing_id)
+        watchlist_entry, created = Watchlist.objects.get_or_create(
+            user=request.user, auctionlisting=listing
+        )
+        if not created:
+            watchlist_entry.delete()
+    return redirect("listings", listing_id=listing_id)
+
+
+@login_required
+def close_auction(request, listing_id):
+    if request.method == "POST":
+        listing = get_object_or_404(AuctionsListing, id=listing_id)
+        highest_bid = listing.bids.aggregate(Max('value'))['value__max']
+        if highest_bid:
+            winning_bid = listing.bids.get(value=highest_bid)
+            listing.winner = winning_bid.created_by
+        listing.status = AuctionsListing.Status.SOLD
+        listing.save(update_fields=['winner', 'status'])
+    return redirect("listings", listing_id=listing.id)
+
+
+@login_required
+def cancel_auction(request, listing_id):
+    if request.method == "POST":
+        listing = get_object_or_404(AuctionsListing, id=listing_id)
+        listing.status = AuctionsListing.Status.INACTIVE
+        listing.save()
     return redirect("listings", listing_id=listing_id)
