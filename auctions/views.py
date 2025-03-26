@@ -29,7 +29,7 @@ def get_auction_listing(**kwargs):
     }
 
 
-def get_all_acutions(**kwargs):
+def get_all_auctions(**kwargs):
     return {
         "auctions": AuctionsListing.objects.filter(
             **kwargs
@@ -73,7 +73,7 @@ def index(request):
 
 @login_required
 def watchlist(request):
-    listings = get_all_acutions(user_watchlist__user=request.user)
+    listings = get_all_auctions(user_watchlist__user=request.user)
     listings["title"] = f"{request.user.username.capitalize()}'s Watchlist"
 
     return render(request, "auctions/index.html", listings)
