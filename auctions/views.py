@@ -30,11 +30,7 @@ def get_auction_listing(**kwargs):
 
 
 def get_all_auctions(**kwargs):
-    return {
-        "auctions": AuctionsListing.objects.filter(
-            **kwargs
-        ).order_by("created_at")
-    }
+    return {"auctions": AuctionsListing.objects.filter(**kwargs).order_by("created_at")}
 
 
 def get_auction_context(listing_id, user):
@@ -49,8 +45,14 @@ def get_auction_context(listing_id, user):
     is_bidder_user = latest_bid.created_by == user if latest_bid else False
     return {
         "auction": auction,
+        "is_auction_active": auction.status == AuctionsListing.Status.ACTIVE,
+        "is_owner": user == auction.created_by,
+        "can_bid": auction.status == AuctionsListing.Status.ACTIVE
+        and user.is_authenticated
+        and user != auction.created_by,
         "bid_count": bid_count,
         "is_bidder_user": is_bidder_user,
+        "latest_bid": latest_bid,
         "bid_form": NewBiddingForm(),
         "comment_form": NewCommentForm(),
         "all_comments": auction.comments.filter(parent_comment__isnull=True),
@@ -61,8 +63,13 @@ def get_auction_context(listing_id, user):
     }
 
 
-def is_valid_bid(bid_value, latest_bid):
-    return latest_bid and bid_value > latest_bid.value
+def is_valid_bid(bid_value, latest_bid, bid_count):
+    print(100*"*")
+    print(bid_count)
+    if bid_count == 0 and bid_value >=latest_bid.value:
+        return True
+    else:    
+        return latest_bid and bid_value > latest_bid.value
 
 
 def index(request):
@@ -84,12 +91,11 @@ def new_bid(request, listing_id):
         bid_form = NewBiddingForm(request.POST)
 
         if bid_form.is_valid():
-            listing = get_object_or_404(AuctionsListing, id=listing_id)
+            context = get_auction_context(listing_id, request.user)
             bid_value = bid_form.cleaned_data["new_bid"]
-            latest_bid = listing.bids.last()
 
-            if not is_valid_bid(bid_value, latest_bid):
-                context = get_auction_context(listing_id, request.user)
+            if not is_valid_bid(bid_value, context["latest_bid"], context["bid_count"]):
+                
                 context["bid_form"] = bid_form
                 context["error_message"] = (
                     "Your bid must be higher than the current bid."
@@ -101,7 +107,7 @@ def new_bid(request, listing_id):
                 )
 
             Bids.objects.create(
-                value=bid_value, created_by=request.user, listing=listing
+                value=bid_value, created_by=request.user, listing=context["auction"]
             )
 
     return redirect("listings", listing_id=listing_id)
@@ -259,12 +265,12 @@ def toggle_watchlist(request, listing_id):
 def close_auction(request, listing_id):
     if request.method == "POST":
         listing = get_object_or_404(AuctionsListing, id=listing_id)
-        highest_bid = listing.bids.aggregate(Max('value'))['value__max']
+        highest_bid = listing.bids.aggregate(Max("value"))["value__max"]
         if highest_bid:
             winning_bid = listing.bids.get(value=highest_bid)
             listing.winner = winning_bid.created_by
         listing.status = AuctionsListing.Status.SOLD
-        listing.save(update_fields=['winner', 'status'])
+        listing.save(update_fields=["winner", "status"])
     return redirect("listings", listing_id=listing.id)
 
 

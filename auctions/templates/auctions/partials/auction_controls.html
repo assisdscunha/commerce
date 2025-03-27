@@ -1,0 +1,12 @@
+<div class="d-inline">
+  {% if auction.created_by != auction.bids.last.created_by %}
+    <form action="{% url 'close_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to close your auction?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success">Close Auction</button>
+    </form>
+  {% endif %}
+  <form action="{% url 'cancel_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to cancel your auction?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Cancel Auction</button>
+  </form>
+</div>

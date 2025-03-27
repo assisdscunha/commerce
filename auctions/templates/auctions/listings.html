@@ -6,9 +6,9 @@
   <h2>Listing: {{ auction.title }}</h2>
   <div>
     {% if user.is_authenticated %}
-    {% if user == auction.winner %}
-      <div class="alert alert-info" role="alert">You won the auction!</div>
-    {% endif %}
+      {% if user == auction.winner %}
+        <div class="alert alert-info" role="alert">You won the auction!</div>
+      {% endif %}
       <form action="{% url 'toggle_watchlist' auction.id %}" method="POST">
         {% csrf_token %}
         <button class="btn {{ btn_class }} mb-3 btn-sm">{{ watchlist_label }}</button>
@@ -18,34 +18,18 @@
   <img src="{{ auction.url }}" class="mt-3 w-auto h-25" />
   <p class="mt-3">{{ auction.description }}</p>
   <h3>R$ {{ auction.bids.last.value|localize }}</h3>
-  {% if bid_count > 0 %}
+  {% if bid_count > 0 and is_auction_active %}
     <p>
       Bid count: {{ bid_count }}.{% if is_bidder_user %}Your bid is the current bid.{% endif %}
     </p>
   {% endif %}
   {% if user.is_authenticated %}
-    {% if user == auction.created_by %}
-      <div class="d-inline">
-        {% if auction.created_by != auction.bids.last.created_by %}
-          <form action="{% url 'close_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to close your auction?');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success">Close Auction</button>
-          </form>
-        {% endif %}
-        <form action="{% url 'cancel_auction' auction.id %}" method="POST" class="d-inline" class="mt-2" onsubmit="return confirm('Do you really want to cancel your auction?');">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Cancel Auction</button>
-        </form>
-      </div>
-    {% else %}
-      {% if error_message %}
-        <div class="alert alert-danger" role="alert">{{ error_message }}</div>
-      {% endif %}
-      <form action="{% url 'new_bid' auction.id %}" method="post" class="mt-4">
-        {% csrf_token %}
-        {{ bid_form.new_bid }}
-        <button type="submit" class="btn btn-primary mt-2">Submit</button>
-      </form>
+    {% if is_owner %}
+      {% include 'auctions/partials/auction_controls.html' %}
+    {% elif is_auction_active %}
+      {% include 'auctions/partials/bid_section.html' %}
+    {% elif not is_auction_active %}
+      <p class="text-muted">This auction is {{ auction.get_status_display }}. No more bids allowed.</p>
     {% endif %}
   {% endif %}
   <h3 class="mt-4">Details</h3>
@@ -54,34 +38,5 @@
     <li>Created by: {{ auction.created_by }}</li>
     <li>Created: {{ auction.created_at|date:'d/m/Y H:i' }}</li>
   </ul>
-  <input type="checkbox" id="toggle-comments" class="d-none" />
-  <label for="toggle-comments" class="btn btn-secondary mt-4"></label>
-  <div id="comments-section" class="pb-4">
-    <h3 class="mt-4">Comments</h3>
-    {% include 'auctions/comments_form.html' with comment=comment_form.comment %}
-
-    <div class="comments-section">
-      <h5>Most recent questions</h5>
-      {% for comment in all_comments %}
-        <div class="comment pt-4" id="comment-{{ comment.id }}">
-          <div class="d-flex align-items-center user-comment-text">
-            <h6 class="mb-0">{{ comment.user_comment }}</h6>
-            {% if user.is_authenticated %}
-              <label for="reply-comment-{{ comment.id }}" class="reply-label mb-0 pl-2">reply</label>
-              <input type="radio" name="reply-toggle" id="reply-comment-{{ comment.id }}" class="d-none toggle-reply" />
-            {% endif %}
-            <div class="reply-form">
-              {% include 'auctions/comments_form.html' with comment=comment_form.comment comment_id=comment.id %}
-            </div>
-          </div>
-
-          {% if comment.responses.exists %}
-            <div class="responses" style="margin-left: 20px;">
-              {% include 'auctions/comment_responses.html' with responses=comment.responses.all %}
-            </div>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
-  </div>
+  {% include 'auctions/partials/comments_section.html' %}
 {% endblock %}

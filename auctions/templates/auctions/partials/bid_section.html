@@ -1,0 +1,8 @@
+{% if error_message %}
+  <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+{% endif %}
+<form action="{% url 'new_bid' auction.id %}" method="post" class="mt-4">
+  {% csrf_token %}
+  {{ bid_form.new_bid }}
+  <button type="submit" class="btn btn-primary mt-2">Submit</button>
+</form>

@@ -1,0 +1,33 @@
+<input type="checkbox" id="toggle-comments" class="d-none" />
+<label for="toggle-comments" class="btn btn-secondary mt-4"></label>
+<div id="comments-section" class="pb-4">
+  <h3 class="mt-4">Comments</h3>
+  {% include 'auctions/partials/comments_form.html' with comment=comment_form.comment %}
+  <h5>
+    {% if all_comments %}
+      Most recent questions
+    {% else %}
+      No comments yet
+    {% endif %}
+  </h5>
+  {% for comment in all_comments %}
+    <div class="comment pt-4" id="comment-{{ comment.id }}">
+      <div class="d-flex align-items-center user-comment-text">
+        <h6 class="mb-0">{{ comment.user_comment }}</h6>
+        {% if user.is_authenticated %}
+          <label for="reply-comment-{{ comment.id }}" class="reply-label mb-0 pl-2">reply</label>
+          <input type="radio" name="reply-toggle" id="reply-comment-{{ comment.id }}" class="d-none toggle-reply" />
+        {% endif %}
+        <div class="reply-form">
+          {% include 'auctions/partials/comments_form.html' with comment=comment_form.comment comment_id=comment.id %}
+        </div>
+      </div>
+
+      {% if comment.responses.exists %}
+        <div class="responses" style="margin-left: 20px;">
+          {% include 'auctions/partials/comment_responses.html' with responses=comment.responses.all %}
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
